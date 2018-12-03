@@ -58,3 +58,13 @@ begin
   end loop;
 end;
 $$;
+
+select f_day02_part2();
+
+-- this shows us the two correct boxes, but we have to inspect them manually to see their shared letters
+select
+smaller.box as smaller_box, bigger.box as bigger_box
+from
+day02 as smaller
+inner join day02_part2_diffs as diffs on smaller.id = diffs.smaller_id
+inner join day02 as bigger on diffs.bigger_id = bigger.id;
