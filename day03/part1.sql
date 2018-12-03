@@ -16,15 +16,6 @@ create table day03_squares (
   from_top int not null
 );
 
-insert into day03_squares
-select
-  id,
-  generate_series(from_left, from_left + width - 1, 1) as from_left,
-  generate_series(from_top, from_top + height - 1, 1) as from_top
-from
-day03;
-
-
 with
   source as (select id, from_left, from_top, width, height from day03),
   column_positions as (select id, generate_series(from_left, from_left + width - 1, 1) as from_left from source),
