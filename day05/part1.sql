@@ -45,6 +45,8 @@ create index day05_chars_matches_idx on day05_chars (id, ch, previous_id, previo
 where
 ch != previous_ch and upper(ch) = upper(previous_ch) and lower(ch) = lower(previous_ch);
 
+create index day05_chars_previous_id_idx on day05_chars (previous_id);
+
 create view first_reaction as
 select id, previous_id, ch, previous_ch
 from day05_chars
