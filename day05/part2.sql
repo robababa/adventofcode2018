@@ -18,7 +18,7 @@ $$
         input,
         '(' || char_to_remove || '|' || upper(char_to_remove) || ')', '', 'g'
         );
-      output := day05_string_maximum_reaction(shorter_input);
+      output := day05_string_reaction(shorter_input);
       raise notice 'output length is %', length(output);
       shortest_length := least(coalesce(shortest_length, length(output)), length(output));
       raise notice 'shortest length is %', shortest_length;
