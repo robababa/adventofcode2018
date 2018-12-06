@@ -1,85 +1,64 @@
 -- use psql
-drop view if exists first_reaction;
-drop table if exists day05, day05_chars;
+drop table if exists day05;
+drop function if exists day05_string_reaction, day05_string_maximum_reaction;
+drop type if exists day05_type;
 
 create table day05 (full_string text);
 
 \copy day05 from './input.txt';
 
-create table day05_chars (
-  id serial not null,
-  ch char(1) not null,
-  previous_id bigint null,
-  previous_ch char(1) null
+create type day05_type as (
+  polymer text,
+  start_position int
 );
 
--- break out the characters into individual rows
--- this takes about 24 seconds on my machine
-do
+create or replace function day05_string_reaction(input day05_type) returns day05_type
+language plpgsql
+immutable
+as
 $$
   declare
-    my_id bigint := null;
-    ch char(1) := ' ';
-    previous_ch char(1) := ' ';
+    old_ch text := null;
+    new_ch text := null;
   begin
-    foreach ch in array (select regexp_split_to_array(full_string, '') from day05 limit 1) loop
-      insert into day05_chars (ch, previous_id, previous_ch) values (ch, my_id, previous_ch) returning id into my_id;
-      previous_ch := ch;
+    for i in (input.start_position)..((input.polymer).length) loop
+      new_ch := substr(input.polymer, i, 1);
+      -- raise notice 'comparing % and %', old_ch, new_ch;
+      if (upper(new_ch) = upper(old_ch) and new_ch != old_ch)
+        then
+          -- clip the i and (i-1) characters from the string
+          -- new starting point will be character i - 2
+          return (substr(input.polymer, 1, i - 2) || substr(input.polymer, i + 1), i - 2)::day05_type;
+        else
+          old_ch := new_ch;
+      end if;
     end loop;
+    return input;
   end;
 $$
 ;
 
-with update_source as (
-  select id, ch, lag(id) over (order by id) as previous_id, lag(ch) over (order by id) as previous_ch from day05_chars
-)
-update day05_chars
-set
-  previous_id = update_source.previous_id,
-  previous_ch = update_source.previous_ch
-from update_source
-where
-day05_chars.id = update_source.id;
-
-create index day05_chars_matches_idx on day05_chars (id, ch, previous_id, previous_ch)
-where
-ch != previous_ch and upper(ch) = upper(previous_ch) and lower(ch) = lower(previous_ch);
-
-create index day05_chars_previous_id_idx on day05_chars (previous_id);
-
-create view first_reaction as
-select id, previous_id, ch, previous_ch
-from day05_chars
-where
-ch != previous_ch and upper(ch) = upper(previous_ch) and lower(ch) = lower(previous_ch)
-order by id
-limit 1;
-
-do
+create or replace function day05_string_maximum_reaction(input text) returns text
+language plpgsql
+immutable
+as
 $$
   declare
-    reaction first_reaction%rowtype;
-    affected_rows int := 0;
-begin
+    old_input day05_type;
+    new_input day05_type;
+  begin
+    select ((input, 1)::day05_type).* into old_input;
+    select (('', 1)::day05_type).* into new_input;
     loop
-      select * into reaction from first_reaction;
-      get diagnostics affected_rows := ROW_COUNT;
-      exit when affected_rows = 0;
-
-      -- update the row directly below the reaction, so its previous columns match the row directly above the reaction
-      update day05_chars
-      set
-      (previous_id, previous_ch) =
-        (select previous_id, previous_ch from day05_chars where id = reaction.previous_id)
-      where
-      previous_id = reaction.id;
-
-      -- now delete the rows in the reaction
-      delete from day05_chars where id = reaction.id or id = reaction.previous_id;
-
+      -- raise notice 'checking string %', old_input;
+      select (day05_string_reaction(old_input)).* into new_input;
+      exit when new_input.polymer = old_input.polymer or new_input.polymer = '' or new_input.polymer is null;
+      old_input := new_input;
     end loop;
+    return new_input.polymer;
   end;
 $$
 ;
 
-select count(*) as part1_answer from day05_chars;
+with source as (select full_string from day05)
+select length(day05_string_maximum_reaction(source.full_string)) as answer from source;
