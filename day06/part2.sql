@@ -8,4 +8,4 @@ with source as (
   having
     sum(abs(day06.x - grid.x) + abs(day06.y - grid.y)) <= 10000
 )
-select count(*) from source;
+select count(*) as answer from source;
