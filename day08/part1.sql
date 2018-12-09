@@ -24,6 +24,88 @@ create table day08_metadata (
 
 create type day08_next_read as enum ('insert_node', 'update_node', 'insert_metadata');
 
+do
+language plpgsql
+$$
+declare
+  entry day08_values;
+  current_node day08_node;
+  declare aux day08_node;
+  nodes day08_node[];
+  next_enum day08_next_read := 'insert_node';
+begin
+  for entry in (select * from day08_values order by id) loop
+    if next_enum = 'insert_node'
+      then
+        --           node ID   parent node ID (nullable)              child count  metadata count
+        current_node := (entry.id, nodes[cardinality(nodes)].node_id, entry.value, null);
+        raise notice 'inserting node id %, parent_id %, child_count %, md_count %',
+          current_node.node_id, current_node.parent_id, current_node.child_count, current_node.md_count;
+        insert into day08_node values (current_node.*);
+        -- if this node has a parent, i.e. is not the root node, then decrement its parent's child count now
+        if array_length(nodes, 1) > 0
+          then
+            aux := nodes[cardinality(nodes)];
+            aux.child_count := aux.child_count - 1;
+            nodes[cardinality(nodes)] := aux;
+        end if;
+        nodes := array_append(nodes, current_node);
+        next_enum := 'update_node';
+        continue;
+    end if;
+
+    if next_enum = 'update_node'
+      then
+        current_node.md_count := entry.value;
+        raise notice 'updating node id % with md_count %', current_node.node_id, current_node.md_count;
+        update day08_node set md_count = current_node.md_count where node_id = current_node.node_id;
+        aux := nodes[cardinality(nodes)];
+        aux.md_count := current_node.md_count;
+        nodes[cardinality(nodes)] := aux;
+
+        -- pop off nodes with no remaining children or metadata
+        while nodes[cardinality(nodes)].md_count = 0 and nodes[cardinality(nodes)].child_count = 0 loop
+          nodes := array_remove(nodes, nodes[cardinality(nodes)]);
+          current_node := nodes[cardinality(nodes)];
+        end loop;
+
+        -- if our array is empty now, the next thing is to read another node
+        -- this should never happen, since we always have a root node until the end
+        case
+          when array_length(nodes, 1) = 0   then next_enum := 'insert_node';
+          when current_node.child_count > 0 then next_enum := 'insert_node';
+          when current_node.md_count > 0    then next_enum := 'insert_metadata';
+        end case;
+        continue;
+    end if;
+
+
+    -- next_enum is an 'md_value'
+    raise notice '-- inserting metadata node_id %, md_value %', current_node.node_id, entry.value;
+    insert into day08_metadata (node_id, md_value) values (current_node.node_id, entry.value);
+    aux := nodes[cardinality(nodes)];
+    aux.md_count := aux.md_count - 1;
+    nodes[cardinality(nodes)] := aux;
+
+    -- pop off nodes with no remaining children or metadata
+    while nodes[cardinality(nodes)].md_count = 0 and nodes[cardinality(nodes)].child_count = 0 loop
+      nodes := array_remove(nodes, nodes[cardinality(nodes)]);
+      current_node := nodes[cardinality(nodes)];
+    end loop;
+
+    case
+      when array_length(nodes, 1) = 0   then next_enum := 'insert_node';
+      when current_node.child_count > 0 then next_enum := 'insert_node';
+      when current_node.md_count > 0    then next_enum := 'insert_metadata';
+    end case;
+  end loop;
+end;
+$$
+;
+
+select sum(md_value) from day08_metadata;
+
+/*
 create or replace function insert_node(values_id_in int, parent_id_in int) returns void
 language sql
 as
@@ -75,89 +157,6 @@ as
     end;
   $$
 ;
-
-/*
-do
-language plpgsql
-$$
-declare
-  entry day08;
-  new_node day08_node;
-  nodes int[];
-  next_enum day08_next_read := 'node';
-  md_counts int[];
-  child_counts int[];
-begin
-  for entry in (select * from day08 order by id) loop
-    if next_enum = 'node'
-      then
-        begin
-          --           node ID   parent node ID (maybe null) child count metadata count
-          new_node := (entry.id, nodes[cardinality(nodes)], entry.value, null);
-          nodes := array_append(nodes, entry.id);
-          child_counts := array_append(child_counts, entry.value);
-          next_enum := 'md_count';
-        end;
-
-      elsif next_enum = 'md_count'
-        then
-          begin
-            new_node.md_count := entry.value;
-            raise notice 'inserting node id %, parent_id %, child_count %, md_count %',
-              new_node.id, new_node.parent_id, new_node.child_count, new_node.md_count;
-            insert into day08_node values (new_node.*);
-
-            if new_node.child_count > 0
-              then
-                -- we're going to read a child node
-                next_enum := 'node';
-              elsif new_node.md_count > 0
-                -- we're going to read metadata values
-                then
-                  next_enum := 'md_value';
-                  md_counts := array_append(md_counts, new_node.md_count);
-              else
-                begin
-                  -- the current node has no children, no metadata, so is not the parent of anything
-                  -- pop it off of the nodes array, and get ready to read another node
-                  while array_length(md_counts, 1) > 0 and md_counts[cardinality(md_counts)] = 0 loop
-                    nodes := array_remove(nodes, nodes[cardinality(nodes)]);
-                    md_counts := array_remove(md_counts, md_counts[cardinality(md_counts)]);
-                  end loop;
-                  next_enum := 'node';
-                end;
-            end if;
-          end;
-
-      elsif next_enum = 'md_value'
-        then
-          begin
-            raise notice '-- inserting metadata node_id %, md_value %', new_node.id, entry.value;
-            insert into day08_metadata (node_id, md_value) values (new_node.id, entry.value);
-            md_counts[cardinality(md_counts)] := md_counts[cardinality(md_counts)] - 1;
-
-            -- strip off all completed metadata searches (if parent metadata is empty, we might loop more than once)
-            while array_length(md_counts, 1) > 0 and md_counts[cardinality(md_counts)] = 0 loop
-              nodes := array_remove(nodes, nodes[cardinality(nodes)]);
-              md_counts := array_remove(md_counts, md_counts[cardinality(md_counts)]);
-            end loop;
-
-            -- if we have no more metadata to search, then our next search value is a node
-            if array_length(md_counts, 1) = 0
-              then
-                next_enum := 'node';
-              else
-                -- this is redundant, because next_enum is already set this way, but it helps readability
-                next_enum := 'md_value';
-            end if;
-          end;
-    end if;
-  end loop;
-end;
-$$
-;
-
-select sum(md_value) from day08_metadata;
 */
 
 /*
