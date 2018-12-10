@@ -1,3 +1,6 @@
+\pset border 0
+\t on
+
 -- show the display
 with
   x_range as (select min(x) as min_x, max(x) as max_x from day10),
