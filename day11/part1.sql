@@ -1,5 +1,5 @@
 -- use psql
-drop table if exists day11;
+drop table if exists day11 cascade;
 
 \set puzzle_input 5719
 
