@@ -1,3 +1,3 @@
 #!/bin/bash
 
-head -1 sample_input.txt | awk '{print $NF}'
+head -1 input.txt | awk '{print $NF}'

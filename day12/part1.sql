@@ -72,9 +72,9 @@ $$
         position,
         day12_compute_next_state(
             lag(state, 2, '.') over (order by position) ||
-            lag(state, 2, '.') over (order by position) ||
+            lag(state, 1, '.') over (order by position) ||
             state ||
-            lead(state, 2, '.') over (order by position) ||
+            lead(state, 1, '.') over (order by position) ||
             lead(state, 2, '.') over (order by position)
           ) as new_state
       from day12
@@ -95,7 +95,7 @@ language plpgsql
 $$
   declare
   begin
-    for gen in 1..2 loop
+    for gen in 1..20 loop
       perform day12_create_next_generation(gen);
       perform day12_update_next_generation(gen);
     end loop;
