@@ -1,4 +1,4 @@
-drop function if exists day12_create_next_generation;
+drop function if exists day12_create_next_generation, day12_compute_next_state, day12_update_next_generation;
 drop table if exists day12_initial_state, day12, day12_rules;
 
 create table day12_initial_state (state text);
@@ -53,6 +53,43 @@ $$
 $$
 ;
 
+create or replace function day12_compute_next_state(current_neighborhood text) returns text
+language sql
+as
+$$
+  select coalesce(max(output), '.') as value from day12_rules where pattern = current_neighborhood;
+$$
+;
+
+create or replace function day12_update_next_generation(next_gen int) returns void
+language plpgsql
+as
+$$
+  begin
+    with source as (
+      select
+        generation,
+        position,
+        day12_compute_next_state(
+            lag(state, 2, '.') over (order by position) ||
+            lag(state, 2, '.') over (order by position) ||
+            state ||
+            lead(state, 2, '.') over (order by position) ||
+            lead(state, 2, '.') over (order by position)
+          ) as new_state
+      from day12
+      where generation = next_gen
+    )
+    update day12
+      set state = new_state
+    from source
+    where
+      day12.generation = source.generation and
+      day12.position = source.position;
+  end;
+$$
+;
+
 do
 language plpgsql
 $$
@@ -60,8 +97,11 @@ $$
   begin
     for gen in 1..2 loop
       perform day12_create_next_generation(gen);
+      perform day12_update_next_generation(gen);
     end loop;
   end;
 $$
 ;
 
+-- 3832 is too high
+select sum(position) from day12 where generation = 20 and state = '#';
