@@ -1,7 +1,5 @@
 drop table if exists day11_expansion;
 
--- 90,39,210 is wrong
-
 create table day11_expansion (
   x int not null,
   y int not null,
