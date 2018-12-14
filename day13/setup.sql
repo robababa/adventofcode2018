@@ -5,7 +5,7 @@ create table day13 (
   line text not null
 );
 
-\copy day13 (line) from program 'sed ''s/\\/\\\\/g'' ./sample_input.txt';
+\copy day13 (line) from program 'sed ''s/\\/\\\\/g'' ./sample_input2.txt';
 
 update day13 set id = id - 1;
 
@@ -23,7 +23,7 @@ insert into day13_grid (y, track, x)
 select id, track, row_number() over (partition by id) - 1 from source;
 
 create table day13_cart (
-  id serial not null,
+  id serial not null primary key,
   x int not null,
   y int not null,
   direction text not null check (direction in ('N','S','E','W')),
