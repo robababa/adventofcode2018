@@ -5,7 +5,7 @@ create table day13 (
   line text not null
 );
 
-\copy day13 (line) from program 'sed ''s/\\/\\\\/g'' ./sample_input2.txt';
+\copy day13 (line) from program 'sed ''s/\\/\\\\/g'' ./input.txt';
 
 update day13 set id = id - 1;
 

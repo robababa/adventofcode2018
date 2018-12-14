@@ -15,11 +15,16 @@ do
       not_crashed bigint := 0;
       cart day13_cart;
       affected bigint := 0;
+      round bigint := 1;
     begin
       select count(*) into not_crashed from day13_cart_crashed;
-      raise notice '% carts to begin with', not_crashed;
+      raise notice '% carts to begin with at %', not_crashed, clock_timestamp();
       loop
         exit when not_crashed <= 1;
+        if round % 100 = 0
+          then
+            raise notice '-- round % at %', round, clock_timestamp();
+        end if;
 
         for cart in (select * from day13_cart order by x, y) loop
           perform day13_move_cart(cart);
@@ -41,9 +46,10 @@ do
               raise notice 'crashed % carts', affected;
               affected := 0;
               select count(*) into not_crashed from day13_cart_crashed where not crashed;
-              raise notice '% non-crashed carts left', not_crashed;
+              raise notice '% non-crashed carts left at %', not_crashed, clock_timestamp();
           end if;
         end loop;
+        round := round + 1;
       end loop;
     end;
     $$
