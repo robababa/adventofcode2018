@@ -43,13 +43,19 @@ $$
       when '/' then
           case current_direction
               when 'N' then 'E'
+              when 'E' then 'N'
+              when 'S' then 'W'
               when 'W' then 'S'
           end
       when '\' then
           case current_direction
-              when 'S' then 'E'
+              when 'N' then 'W'
               when 'W' then 'N'
+              when 'S' then 'E'
+              when 'E' then 'S'
           end
+      else -- track is - or | so continue in same direction
+          current_direction
   end
   from next_track;
 $$
@@ -105,7 +111,7 @@ $$
     spots := day13_spots();
     loop
       for cart in (select * from day13_cart order by x, y) loop
-        raise notice 'moving cart % from x, y = %, % with direction % and next_turn %',
+        raise notice 'moving cart % from x = %, y = % with direction % and next_turn %',
           cart.id, cart.x, cart.y, cart.direction, cart.next_turn;
         perform day13_move_cart(cart);
       end loop;

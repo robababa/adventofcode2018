@@ -19,7 +19,7 @@ create table day13_grid (
 with source as (
   select id, regexp_split_to_table(line, '') as track from day13
 )
-insert into day13_grid (x, track, y)
+insert into day13_grid (y, track, x)
 select id, track, row_number() over (partition by id) - 1 from source;
 
 create table day13_cart (
