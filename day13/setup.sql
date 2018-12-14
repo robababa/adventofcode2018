@@ -27,7 +27,8 @@ create table day13_cart (
   x int not null,
   y int not null,
   direction text not null check (direction in ('N','S','E','W')),
-  next_turn text not null default 'left' check (next_turn in ('left', 'straight', 'right'))
+  next_turn text not null default 'left' check (next_turn in ('left', 'straight', 'right')),
+  constraint uk_day13_cart_x_y unique (x, y)
 );
 
 with
