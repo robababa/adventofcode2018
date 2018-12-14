@@ -3,11 +3,9 @@ language plpgsql
 $$
   declare
     carts bigint := 0;
-    spots bigint := 0;
     cart day13_cart;
   begin
     select count(*) into carts from day13_cart;
-    spots := day13_spots();
     loop
       for cart in (select * from day13_cart order by x, y) loop
         /*

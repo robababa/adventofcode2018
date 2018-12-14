@@ -5,7 +5,7 @@ create table day13 (
   line text not null
 );
 
-\copy day13 (line) from program 'sed ''s/\\/\\\\/g'' ./input.txt';
+\copy day13 (line) from program 'sed ''s/\\/\\\\/g'' ./sample_input.txt';
 
 update day13 set id = id - 1;
 
@@ -67,14 +67,6 @@ alter table day13_grid add constraint check_track check (track in ('|', '-', '\'
 -- now the track and the carts are all set up
 
 -- set up the functions
-create or replace function day13_spots() returns bigint
-  language sql
-as
-$$
-select count(distinct(x,y)) from day13_cart;
-$$
-;
-
 create or replace function day13_next_turn(current_turn text) returns text
   language sql
 as
