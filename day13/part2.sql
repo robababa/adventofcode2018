@@ -26,7 +26,12 @@ do
             raise notice '-- round % at %', round, clock_timestamp();
         end if;
 
-        for cart in (select * from day13_cart order by x, y) loop
+        for cart in (
+          select day13_cart.*
+          from day13_cart
+            inner join day13_cart_crashed on day13_cart.id = day13_cart_crashed.cart_id
+          where not day13_cart_crashed.crashed order by x, y
+        ) loop
           perform day13_move_cart(cart);
           update day13_cart_crashed as upd
             set crashed = true
