@@ -88,6 +88,7 @@ $$
 
         loop
             select count(*) into unmatched_pairs from day15_distance where distance = 0;
+            raise notice ' at %, unmatched pairs left = %', clock_timestamp(), unmatched_pairs;
             exit when unmatched_pairs = 0;
 
             -- extend what we've found to the next unlinked spot in the path
@@ -99,14 +100,22 @@ $$
                     second_path.to_y,
                     min(first_path.distance + second_path.distance) as new_distance
                 from
-                    day15_distance as first_path
-                        inner join day15_distance as second_path
+                    day15_distance as no_path
+                        inner join
+                        day15_distance as first_path
                             on
-                            first_path.to_x = second_path.from_x and
-                            first_path.to_y = second_path.from_y
-                where
-                    first_path.distance <> 0 and
-                    second_path.distance <> 0
+                            no_path.distance = 0 and
+                            first_path.distance = 1 and
+                            no_path.from_x = first_path.from_x and
+                            no_path.from_y = first_path.from_y
+                            inner join
+                            day15_distance as second_path
+                                on
+                                second_path.distance <> 0 and
+                                first_path.to_x = second_path.from_x and
+                                first_path.to_y = second_path.from_y and
+                                no_path.to_x = second_path.to_x and
+                                no_path.to_y = second_path.to_y
                 group by
                     first_path.from_x,
                     first_path.from_y,
@@ -128,4 +137,5 @@ $$
 $$
 ;
 
+-- took 10.5 minutes on my laptop, on battery power
 select day15_set_distances();
