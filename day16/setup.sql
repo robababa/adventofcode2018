@@ -1,28 +1,39 @@
-drop table if exists day16, day16_result;
+drop table if exists day16, day16_result, day16_operation_code, day16_match;
 
 create table day16 (
-  id serial not null primary key,
-  line text
+    id serial not null primary key,
+    line text
+);
+
+create table day16_result (
+    id serial not null primary key,
+    input_id int not null references day16 (id),
+    opcode int not null,
+    input_a int not null,
+    input_b int not null,
+    output_c int not null,
+    before_0 int not null,
+    before_1 int not null,
+    before_2 int not null,
+    before_3 int not null,
+    after_0 int not null,
+    after_1 int not null,
+    after_2 int not null,
+    after_3 int not null
+);
+
+create table day16_operation_code (
+    id serial not null primary key,
+    code text not null
+);
+
+create table day16_match (
+    id serial not null primary key,
+    result_id int not null references day16_result (id),
+    code_id int not null references day16_operation_code (id)
 );
 
 \copy day16 (line) from './input.txt';
-
-create table day16_result (
-  id serial not null primary key,
-  input_id int not null references day16 (id),
-  opcode int not null,
-  input_a int not null,
-  input_b int not null,
-  output_c int not null,
-  before_0 int not null,
-  before_1 int not null,
-  before_2 int not null,
-  before_3 int not null,
-  after_0 int not null,
-  after_1 int not null,
-  after_2 int not null,
-  after_3 int not null
-);
 
 with source as (
   select
@@ -56,3 +67,15 @@ select
     before_array[1]::int, before_array[2]::int, before_array[3]::int, before_array[4]::int,
     after_array[1]::int, after_array[2]::int, after_array[3]::int, after_array[4]::int
 from results;
+
+insert into day16_operation_code (code)
+values ('addr'), ('addi'),
+       ('mulr'), ('muli'),
+       ('banr'), ('bani'),
+       ('borr'), ('bori'),
+       ('setr'), ('seti'),
+       ('gtir'), ('gtri'), ('gtrr'),
+       ('eqir'), ('eqri'), ('eqrr');
+
+
+\i functions.sql
