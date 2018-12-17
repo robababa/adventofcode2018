@@ -1,3 +1,4 @@
+drop table if exists day16_part2_instruction;
 drop function if exists day16_assign_codes;
 alter table day16_operation_code drop column opcode;
 
@@ -110,17 +111,18 @@ $$
         select code.code, inst.input_a, inst.input_b, inst.output_c
         from day16_part2_instruction as inst
             inner join day16_operation_code as code
-            on inst.opcode_id = code.id
+            on inst.opcode_id = code.opcode
         order by inst.id
     ) loop
-        raise notice 'register values is %', register_values;
+        -- raise notice 'register values is %', register_values;
+        -- raise notice 'operation is % % % %', command.code, command.input_a, command.input_b, command.output_c;
         --operation text, input_a int, input_b int, output_c int, r0 int, r1 int, r2 int, r3 int
         register_values := day16_operation(
             command.code, command.input_a, command.input_b, command.output_c,
             register_values[1], register_values[2], register_values[3], register_values[4]
         );
     end loop;
-    raise notice 'register values is %', register_values;
+    raise notice 'final register values are %', register_values;
   end;
 $$
 ;
