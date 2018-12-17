@@ -61,3 +61,66 @@ $$
   end;
 $$
 ;
+
+create table day16_part2_instruction (
+  id int not null primary key,
+  opcode_id int not null,
+  input_a int not null,
+  input_b int not null,
+  output_c int not null
+);
+
+with last_after as (
+    select max(id) as last_after_id from day16 where line like 'After%'
+),
+text_instructions as (
+    select
+        id,
+        line
+    from day16 cross join last_after
+    where
+        id > last_after_id and
+        length(line) > 0
+),
+split_insructions as (
+    select
+        id,
+        regexp_split_to_array(line, ' ') as instruction_array
+    from text_instructions
+)
+insert into day16_part2_instruction (id, opcode_id, input_a, input_b, output_c)
+select
+  id,
+  (instruction_array[1])::int,
+  (instruction_array[2])::int,
+  (instruction_array[3])::int,
+  (instruction_array[4])::int
+from
+split_insructions;
+
+-- 3 is wrong
+do
+language plpgsql
+$$
+  declare
+    register_values int[] := ARRAY[0, 0, 0, 0];
+    command record;
+  begin
+    for command in (
+        select code.code, inst.input_a, inst.input_b, inst.output_c
+        from day16_part2_instruction as inst
+            inner join day16_operation_code as code
+            on inst.opcode_id = code.id
+        order by inst.id
+    ) loop
+        raise notice 'register values is %', register_values;
+        --operation text, input_a int, input_b int, output_c int, r0 int, r1 int, r2 int, r3 int
+        register_values := day16_operation(
+            command.code, command.input_a, command.input_b, command.output_c,
+            register_values[1], register_values[2], register_values[3], register_values[4]
+        );
+    end loop;
+    raise notice 'register values is %', register_values;
+  end;
+$$
+;
